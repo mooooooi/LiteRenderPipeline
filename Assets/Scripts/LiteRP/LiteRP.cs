@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,22 +7,24 @@ using UnityEngine.Experimental.Rendering.RenderGraphModule;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.RendererUtils;
 
-public class LiteRP : RenderPipeline
+public partial class LiteRP : RenderPipeline
 {
     protected LiteRPAsset m_Asset;
     protected ShaderTagId m_ShaderTagId = new ShaderTagId("LiteRPLightModeTag");
-    protected RenderGraph m_RenderGraph;
 
     public LiteRP(LiteRPAsset asset)
     {
         m_Asset = asset;
         m_RenderGraph = new RenderGraph();
+
+        InitializeRenderGraph();
     }
 
     protected override void Dispose(bool disposing)
     {
-        m_RenderGraph?.Cleanup();
-        m_RenderGraph = null;
+        CleanupRenderGraph();
+        
+        GC.SuppressFinalize(this);
         base.Dispose(disposing);
     }
 
@@ -53,10 +56,20 @@ public class LiteRP : RenderPipeline
         var cmd = CommandBufferPool.Get(cam.name);
         context.SetupCameraProperties(cam);
 
+        GenericFillCommandBuffer(context, cam, cullingRet, cmd);
+
+        context.ExecuteCommandBuffer(cmd);
+        cmd.Clear();
+        CommandBufferPool.Release(cmd);
+        context.Submit();
+        EndCameraRendering(context, cam);
+    }
+
+    private void GenericFillCommandBuffer(ScriptableRenderContext context, Camera cam, CullingResults cullingRet, CommandBuffer cmd)
+    {
         var clearSkyBox = cam.clearFlags == CameraClearFlags.Skybox;
         var clearDepth = cam.clearFlags != CameraClearFlags.Nothing;
         var clearColor = cam.clearFlags == CameraClearFlags.SolidColor;
-
         cmd.ClearRenderTarget(clearDepth, clearColor, CoreUtils.ConvertSRGBToActiveColorSpace(cam.backgroundColor));
 
         // Rendering
@@ -73,10 +86,6 @@ public class LiteRP : RenderPipeline
             var skyRenderList = context.CreateSkyboxRendererList(cam);
             cmd.DrawRendererList(skyRenderList);
         }
-        context.ExecuteCommandBuffer(cmd);
-        cmd.Clear();
-        CommandBufferPool.Release(cmd);
-        context.Submit();
-        EndCameraRendering(context, cam);
     }
+
 }
