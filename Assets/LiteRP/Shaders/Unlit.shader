@@ -3,10 +3,14 @@ Shader "LiteRP/Unit"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
+        _Color ("Color", Color) = (1, 1, 1, 1)
     }
     SubShader
     {
-        Tags { "LightMode"="LiteRPLightModeTag" "RenderType"="Opaque" }
+        Tags {
+            "Queue"="Geometry"
+            "RenderType"="Opaque"
+        }
         LOD 100
 
         Pass
@@ -34,6 +38,7 @@ Shader "LiteRP/Unit"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+            float4 _Color;
 
             v2f vert (appdata v)
             {
@@ -47,7 +52,7 @@ Shader "LiteRP/Unit"
             fixed4 frag (v2f i) : SV_Target
             {
                 // sample the texture
-                fixed4 col = tex2D(_MainTex, i.uv);
+                fixed4 col = tex2D(_MainTex, i.uv) * _Color;
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;

@@ -3,14 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering.RenderGraphModule;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.RendererUtils;
+using UnityEngine.Rendering.RenderGraphModule;
 
 public partial class LiteRP : RenderPipeline
 {
     protected LiteRPAsset m_Asset;
-    protected ShaderTagId m_ShaderTagId = new ShaderTagId("LiteRPLightModeTag");
+    public static ShaderTagId ShaderTagId = new ShaderTagId("SRPDefaultUnlit");
 
     public LiteRP(LiteRPAsset asset)
     {
@@ -23,7 +22,7 @@ public partial class LiteRP : RenderPipeline
     protected override void Dispose(bool disposing)
     {
         CleanupRenderGraph();
-        
+
         GC.SuppressFinalize(this);
         base.Dispose(disposing);
     }
@@ -42,21 +41,27 @@ public partial class LiteRP : RenderPipeline
             RenderSingmeCamera(context, cam);
         }
 
+        m_RenderGraph.EndFrame();
         EndContextRendering(context, cameras);
     }
 
     private void RenderSingmeCamera(ScriptableRenderContext context, Camera cam)
     {
         BeginCameraRendering(context, cam);
-        if (!cam.TryGetCullingParameters(out var cullingParams))
+
+        if (!PrepareFrameData(context, cam))
             return;
-        // Culling
-        var cullingRet = context.Cull(ref cullingParams);
-        // ClearFlags
+
         var cmd = CommandBufferPool.Get(cam.name);
         context.SetupCameraProperties(cam);
 
-        GenericFillCommandBuffer(context, cam, cullingRet, cmd);
+        // if (!GenericFillCommandBuffer(context, cam, cmd))
+        // {
+        //     cmd.Clear();
+        //     CommandBufferPool.Release(cmd);
+        //     return;
+        // }
+        RecordAndExcuteRenderGraph(context, cmd, cam);
 
         context.ExecuteCommandBuffer(cmd);
         cmd.Clear();
@@ -65,8 +70,14 @@ public partial class LiteRP : RenderPipeline
         EndCameraRendering(context, cam);
     }
 
-    private void GenericFillCommandBuffer(ScriptableRenderContext context, Camera cam, CullingResults cullingRet, CommandBuffer cmd)
+    private bool GenericFillCommandBuffer(ScriptableRenderContext context, Camera cam, CommandBuffer cmd)
     {
+        if (!cam.TryGetCullingParameters(out var cullingParams))
+            return false;
+        // Culling
+        var cullingRet = context.Cull(ref cullingParams);
+        // ClearFlags
+        context.SetupCameraProperties(cam);
         var clearSkyBox = cam.clearFlags == CameraClearFlags.Skybox;
         var clearDepth = cam.clearFlags != CameraClearFlags.Nothing;
         var clearColor = cam.clearFlags == CameraClearFlags.SolidColor;
@@ -74,7 +85,7 @@ public partial class LiteRP : RenderPipeline
 
         // Rendering
         var sortingSettings = new SortingSettings(cam);
-        var drawSettings = new DrawingSettings(m_ShaderTagId, sortingSettings);
+        var drawSettings = new DrawingSettings(ShaderTagId, sortingSettings);
         var filterSettings = new FilteringSettings(RenderQueueRange.opaque);
         var renderListParams = new RendererListParams(cullingRet, drawSettings, filterSettings);
         var renderList = context.CreateRendererList(ref renderListParams);
@@ -86,6 +97,7 @@ public partial class LiteRP : RenderPipeline
             var skyRenderList = context.CreateSkyboxRendererList(cam);
             cmd.DrawRendererList(skyRenderList);
         }
+        return true;
     }
 
 }
