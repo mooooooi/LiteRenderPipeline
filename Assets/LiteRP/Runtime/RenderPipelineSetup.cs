@@ -1,11 +1,15 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class RenderPipelineSetup : MonoBehaviour
+namespace LiteRP
 {
-    public RenderPipelineAsset Asset;
-    private void Awake() {
-        GraphicsSettings.defaultRenderPipeline = Asset;
-        Debug.Log("Setup new RenderPipelineAsset: " + Asset.name, Asset);
+    public class RenderPipelineSetup : MonoBehaviour
+    {
+        public RenderPipelineAsset Asset;
+        private void Awake()
+        {
+            GraphicsSettings.defaultRenderPipeline = Asset;
+            Debug.Log("Setup new RenderPipelineAsset: " + Asset.name, Asset);
+        }
     }
 }

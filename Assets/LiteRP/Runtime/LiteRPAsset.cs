@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-[CreateAssetMenu(menuName = "Rendering/LiteRPAsset")]
-public class LiteRPAsset : RenderPipelineAsset<LiteRP>
+namespace LiteRP
 {
-    protected override RenderPipeline CreatePipeline()
+    [CreateAssetMenu(menuName = "Rendering/LiteRPAsset")]
+    public class LiteRPAsset : RenderPipelineAsset<LiteRP>
     {
-        return new LiteRP(this);
+        protected override RenderPipeline CreatePipeline()
+        {
+            return new LiteRP(this);
+        }
     }
 }
